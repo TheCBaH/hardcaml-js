@@ -1,0 +1,2 @@
+; The upstream sources are only read by the rules in lib/ and ppx/.
+(data_only_dirs hardcaml)

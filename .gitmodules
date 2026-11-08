@@ -1,0 +1,3 @@
+[submodule "hardcaml"]
+	path = hardcaml
+	url = https://github.com/janestreet/hardcaml.git

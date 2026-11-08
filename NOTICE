@@ -1,0 +1,8 @@
+Hardcaml is Copyright Jane Street Group, LLC and licensed under the MIT
+License; the full text is in hardcaml/LICENSE.md (the git submodule).
+
+The files in lib/patches/ are modifications of Hardcaml v0.17.1 sources
+(bits.ml, bits_packed.ml, hardcaml.ml) and remain under that license. The
+build also copies the rest of hardcaml/src and hardcaml/ppx/src unchanged.
+
+Everything else in this repository is under the MIT License in LICENSE.md.

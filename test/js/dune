@@ -1,0 +1,9 @@
+; Runs natively and under js_of_ocaml (Node) against the same expected output.
+
+(library
+ (name test_cyclesim)
+ (libraries hardcaml)
+ (inline_tests
+  (modes native js))
+ (preprocess
+  (pps ppx_jane)))

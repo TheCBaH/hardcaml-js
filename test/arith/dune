@@ -1,0 +1,25 @@
+(library
+ (name arith_cases)
+ (modules arith_cases)
+ (libraries hardcaml))
+
+; Runs natively and under js_of_ocaml (Node) against the same expected output.
+
+(library
+ (name test_arith_ocaml)
+ (modules test_arith_ocaml)
+ (libraries arith_cases hardcaml)
+ (inline_tests
+  (modes native js))
+ (preprocess
+  (pps ppx_jane)))
+
+; Native only: needs the C stubs and Zarith.
+
+(library
+ (name test_arith_c)
+ (modules test_arith_c)
+ (libraries arith_cases hardcaml zarith)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))

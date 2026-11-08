@@ -1,0 +1,159 @@
+--- hardcaml/src/bits_packed.ml	2026-11-08 02:44:11.726974837 +0000
++++ src/bits_packed.ml	2026-11-08 01:53:32.005911966 +0000
+@@ -42,152 +42,10 @@
+   -> width_in_bits_b:int
+   -> unit
+ 
+-external add
+-  :  Bytes.t
+-  -> dst_address:int
+-  -> src_address_a:int
+-  -> src_address_b:int
+-  -> width_in_bits:int
+-  -> unit
+-  = "hardcaml_bits_packed_add"
+-  [@@noalloc]
+-
+-external sub
+-  :  Bytes.t
+-  -> dst_address:int
+-  -> src_address_a:int
+-  -> src_address_b:int
+-  -> width_in_bits:int
+-  -> unit
+-  = "hardcaml_bits_packed_sub"
+-  [@@noalloc]
+-
+-external umul_packed
+-  :  Bytes.t
+-  -> dst_address:int
+-  -> src_address_a:int
+-  -> src_address_b:int
+-  -> width_in_bits_a:int
+-  -> width_in_bits_b:int
+-  -> unit
+-  = "hardcaml_bits_packed_umul_bc" "hardcaml_bits_packed_umul"
+-  [@@noalloc]
+-
+-let mulu t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
+-  let width_in_bits = width_in_bits_a + width_in_bits_b in
+-  let size_in_words = num_words width_in_bits in
+-  umul_packed
+-    t
+-    ~dst_address
+-    ~src_address_a
+-    ~src_address_b
+-    ~width_in_bits_a
+-    ~width_in_bits_b;
+-  mask t ~dst_address:(dst_address + size_in_words - 1) ~width_in_bits
+-;;
+-
+-external smul_packed
+-  :  Bytes.t
+-  -> dst_address:int
+-  -> src_address_a:int
+-  -> src_address_b:int
+-  -> width_in_bits_a:int
+-  -> width_in_bits_b:int
+-  -> unit
+-  = "hardcaml_bits_packed_smul_bc" "hardcaml_bits_packed_smul"
+-  [@@noalloc]
+-
+-let muls t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
+-  let width_in_bits = width_in_bits_a + width_in_bits_b in
+-  let size_in_words = num_words width_in_bits in
+-  smul_packed
+-    t
+-    ~dst_address
+-    ~src_address_a
+-    ~src_address_b
+-    ~width_in_bits_a
+-    ~width_in_bits_b;
+-  mask t ~dst_address:(dst_address + size_in_words - 1) ~width_in_bits
+-;;
+-
+-(* Those functions we implement in C for byte/native code, we implement by bouncing
+-   through the standard [Bits] implementation for javascript. This is more about the
+-   ability to compile than performance, though we dont care much about javascript
+-   performance today anyway. *)
+-module For_javascript = struct
+-  let alloc_mutable buffer ~address ~width_in_bits =
+-    let bits = Bits.Mutable.create width_in_bits in
+-    let size_in_words = num_words width_in_bits in
+-    for i = 0 to size_in_words - 1 do
+-      Bits.Mutable.unsafe_set_int64 bits i (get64 buffer (address + i))
+-    done;
+-    bits
+-  ;;
+-
+-  let set_from_mutable bits t ~dst_address ~size_in_words =
+-    for i = 0 to size_in_words - 1 do
+-      set64 t (dst_address + i) (Bits.Mutable.unsafe_get_int64 bits i)
+-    done
+-  ;;
+-
+-  let add t ~dst_address ~src_address_a ~src_address_b ~width_in_bits =
+-    let a = alloc_mutable t ~address:src_address_a ~width_in_bits in
+-    let b = alloc_mutable t ~address:src_address_b ~width_in_bits in
+-    let c = Bits.Mutable.create width_in_bits in
+-    Bits.Mutable.( +: ) c a b;
+-    set_from_mutable c t ~dst_address ~size_in_words:(num_words width_in_bits)
+-  ;;
+-
+-  let sub t ~dst_address ~src_address_a ~src_address_b ~width_in_bits =
+-    let a = alloc_mutable t ~address:src_address_a ~width_in_bits in
+-    let b = alloc_mutable t ~address:src_address_b ~width_in_bits in
+-    let c = Bits.Mutable.create width_in_bits in
+-    Bits.Mutable.( -: ) c a b;
+-    set_from_mutable c t ~dst_address ~size_in_words:(num_words width_in_bits)
+-  ;;
+-
+-  let mulu t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
+-    let a = alloc_mutable t ~address:src_address_a ~width_in_bits:width_in_bits_a in
+-    let b = alloc_mutable t ~address:src_address_b ~width_in_bits:width_in_bits_b in
+-    let c_width = width_in_bits_a + width_in_bits_b in
+-    let c = Bits.Mutable.create c_width in
+-    Bits.Mutable.( *: ) c a b;
+-    set_from_mutable c t ~dst_address ~size_in_words:(num_words c_width)
+-  ;;
+-
+-  let muls t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
+-    let a = alloc_mutable t ~address:src_address_a ~width_in_bits:width_in_bits_a in
+-    let b = alloc_mutable t ~address:src_address_b ~width_in_bits:width_in_bits_b in
+-    let c_width = width_in_bits_a + width_in_bits_b in
+-    let c = Bits.Mutable.create c_width in
+-    Bits.Mutable.( *+ ) c a b;
+-    set_from_mutable c t ~dst_address ~size_in_words:(num_words c_width)
+-  ;;
+-end
+-
+-let add =
+-  match Sys.backend_type with
+-  | Native | Bytecode -> add
+-  | Other _ -> For_javascript.add
+-;;
+-
+-let sub =
+-  match Sys.backend_type with
+-  | Native | Bytecode -> sub
+-  | Other _ -> For_javascript.sub
+-;;
+-
+-let mulu =
+-  match Sys.backend_type with
+-  | Native | Bytecode -> mulu
+-  | Other _ -> For_javascript.mulu
+-;;
+-
+-let muls =
+-  match Sys.backend_type with
+-  | Native | Bytecode -> muls
+-  | Other _ -> For_javascript.muls
+-;;
++let add = Bits_arith.Packed.add
++let sub = Bits_arith.Packed.sub
++let mulu = Bits_arith.Packed.umul
++let muls = Bits_arith.Packed.smul
+ 
+ let and_ t ~dst_address ~src_address_a ~src_address_b ~size_in_words =
+   for i = 0 to size_in_words - 1 do

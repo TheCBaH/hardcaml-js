@@ -1,0 +1,10 @@
+(copy_files# ../hardcaml/ppx/src/*.{ml,mli})
+
+(library
+ (name ppx_hardcaml0)
+ (public_name hardcaml.ppx_hardcaml0)
+ (kind ppx_deriver)
+ (libraries base compiler-libs.common ppx_sexp_conv ppxlib)
+ (ppx_runtime_libraries)
+ (preprocess
+  (pps ppxlib.metaquot -no-check)))
